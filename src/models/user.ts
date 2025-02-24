@@ -8,6 +8,7 @@ interface IUser extends Document {
     role: 'student' | 'instructor' | 'admin';
     profile?: mongoose.Types.ObjectId | null; 
     isVerified:number;
+    is_ended: number;
 }
 
 const userSchema = new mongoose.Schema<IUser>({
@@ -36,6 +37,8 @@ const userSchema = new mongoose.Schema<IUser>({
       },
       profile: { type: mongoose.Schema.Types.ObjectId, ref: 'Profile' },  // 1-to-1 Relationship
       isVerified:{type:Number,default:0},
+      is_ended: { type: Number, default: 0 }  // 0 = Active, 1 = Ended
+
 }, { timestamps: true });
 userSchema.pre('save', async function(next){
     if(!this.isModified('password'))

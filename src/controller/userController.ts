@@ -58,5 +58,45 @@ export const loginUser=async(req:Request,res:Response)=>{
         res.status(200).json({message:'Login Sucess',token,user:{username:user.username,email:user.email,role:user.role}})
     }catch(error:any){
         res.status(500).json({message:'An error ocuuured',error:error.message});
+        return;
     }
 }   
+//chnage -password
+export const changePass=async(req:Request,res:Response)=>{
+    try{
+        const userId=(req as any).user.userId;
+        const {oldPassword,newPassword,confirmpassword}=req.body;
+        if(!oldPassword|| !newPassword||!confirmpassword){
+            res.status(400).json({message:'Please fill all fields'})
+            return;
+            }
+            if(newPassword!==confirmpassword){
+                res.status(400).json({message:"New Password and confirm password must match"})
+                return;
+            } 
+            if(newPassword.length<5){
+                res.status(400).json({message:"password must be off 5 characters"})
+                return;
+            }
+            const user=await User.findById(userId);
+            if(!user){
+                res.status(400).json({message:"User not found"})
+                return;
+            }
+            const isMatch=await bcrypt.compare(oldPassword,user.password);
+            if(!isMatch){
+                res.status(400).json({message:"old password is in correct"})
+                return;
+            }
+            if(oldPassword===newPassword){
+                res.status(400).json({message:"New password cannot be same as old passowrd"})
+            }
+            const hashedPassword=await bcrypt.hash(newPassword,10);
+            user.password=hashedPassword;
+            await user.save();
+            res.status(200).json({message:"Password changed successfully"})
+            return;
+    }catch(error:any){
+        res.status(500).json({message:'An error ocuuured',error:error.message});
+    }
+};

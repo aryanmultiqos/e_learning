@@ -1,5 +1,6 @@
 import  express  from "express";
-import { loginUser, registerUser } from "../controller/userController";
+import { changePass, loginUser, registerUser } from "../controller/userController";
+import { protect, roleProtect } from "../middleware/authMiddleware";
 
 
 const router = express.Router();
@@ -7,5 +8,7 @@ const router = express.Router();
 router.post('/register', registerUser);
 //loggin with jwt
 router.post('/login', loginUser)
+//change pass
+router.post('/change-pass',protect,roleProtect(['student','instructor']),changePass)
 
 export default router;

@@ -9,6 +9,11 @@ interface ICourse extends Document {
     rating: number;
     semester:number;
     status:'active' | 'inactive';
+    added_by:{
+        createdBy:"admin"|"instructor";
+        adminId:mongoose.Schema.Types.ObjectId;
+        Id:mongoose.Schema.Types.ObjectId;
+    };
 }
 const courseSchema = new mongoose.Schema<ICourse>({
     title: { type: String, required: true },
@@ -19,14 +24,13 @@ const courseSchema = new mongoose.Schema<ICourse>({
     syllabus: [{ type: String }],
     rating: { type: Number, default: 0 },
     semester:{type:Number,required:true,min:1,max:6},
-    status: { type: String, enum: ['active', 'inactive'], default: 'active' }
+    status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+    added_by:{
+        createdBy:{type:String,enum:["admin","instructor"],required:true},
+        Id:{type:mongoose.Schema.Types.ObjectId,ref:"User",required:true}
+    },
 }, { timestamps: true });
 
 
 const Course = mongoose.model<ICourse>('Course', courseSchema);
 export default Course;
-
-
-
-// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2N2I0OGY0OTBkY2JlYWEzOTU1NzJlMzYiLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTczOTk0MDE3OCwiZXhwIjoxNzM5OTUwOTc4fQ.7qe7un1Z6HYgdQaA_eGehIIzJa7fTAUIp4lcOQEH2GE-token student
-// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2N2I1NjBjNGJmYjBjNWQ4NzU2NmJlMzciLCJyb2xlIjoiaW5zdHJ1Y3RvciIsImlhdCI6MTczOTk0MDIzMCwiZXhwIjoxNzM5OTUxMDMwfQ.Fvc7nSXX6RKn9FrtHGxRWMORrCG_doZMSokML-token instrcutorLmVOnc

@@ -1,7 +1,7 @@
 import express from 'express'
 import { protect } from '../middleware/authMiddleware'
 import { roleProtect } from '../middleware/authMiddleware'
-import { createCourse , enrollCourse, deEnrollCourse, getCourseByIns,getCourses,updateCourseStatus, removeOrTransferCourses, endorResumeCourses} from '../controller/courseController'
+import { createCourse , enrollCourse, deEnrollCourse, getCourseByIns,getCourses,updateCourseStatus, removeOrTransferCourses, endorResumeCourses, removeStudentsFromCourse, deleteInstructorCourses} from '../controller/courseController'
 
 
 const router = express.Router()
@@ -12,7 +12,6 @@ router.post('/', protect, roleProtect(['admin', 'instructor']), createCourse)
 //enrolling in course(many to many)
 router.post("/enroll/:courseId", protect, roleProtect(['student']),enrollCourse)
 //get course and populate email and username
-// router.get('/:courseId',getCourseById)
 //get all cousese created by instrcutor
 router.get('/instructor/:instructorId',getCourseByIns )
 //single api to show list for admin instructor and student to fetch courses
@@ -25,7 +24,10 @@ router.put("/de-enroll", protect, roleProtect(["student"]), deEnrollCourse);
 router.post('/manage',protect,roleProtect(['instructor']), removeOrTransferCourses)
 //endor resume courses
 router.patch('/end-resume',protect,roleProtect(['instructor']), endorResumeCourses)
-
+//instructor can remove students from course
+router.post('/remove-students',protect,roleProtect(["instructor"]),removeStudentsFromCourse)
+//admin can delete  instrcutor courses 
+router.post('/delete-courses',protect,roleProtect(['admin']),deleteInstructorCourses)
 
 
 export default router;      

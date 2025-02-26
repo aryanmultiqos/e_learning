@@ -8,12 +8,15 @@ interface ICourse extends Document {
     syllabus: string[];
     rating: number;
     semester:number;
+    materials:String;
     status:'active' | 'inactive';
+    courseId:String
     added_by:{
         createdBy:"admin"|"instructor";
         adminId:mongoose.Schema.Types.ObjectId;
         Id:mongoose.Schema.Types.ObjectId;
     };
+   
 }
 const courseSchema = new mongoose.Schema<ICourse>({
     title: { type: String, required: true },
@@ -29,6 +32,14 @@ const courseSchema = new mongoose.Schema<ICourse>({
         createdBy:{type:String,enum:["admin","instructor"],required:true},
         Id:{type:mongoose.Schema.Types.ObjectId,ref:"User",required:true}
     },
+    materials: [
+        {
+          filename: { type: String, required: true },
+          path: { type: String, required: true },
+          uploadedAt: { type: Date, default: Date.now }
+        }
+      ],
+    courseId:{type:String,required:true}
 }, { timestamps: true });
 
 

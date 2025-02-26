@@ -2,37 +2,41 @@ import { Request, Response } from 'express';
 import User from '../models/user';
 import Course from '../models/course';
 import Profile from '../models/profile';
+
+
+
 //create new cousre(admin or ins only)
 export const createCourse = async (req: Request, res: Response) => {
     try {
-        const { title, description, category, syllabus ,instructorId} = req.body;
-        const userId=(req as any).user.userId;
-        const userRole=(req as any).user.role;
+        const { title, description, category, syllabus, instructorId } = req.body;
+        const userId = (req as any).user.userId;
+        const userRole = (req as any).user.role;
 
-        let assignedInstructorId:string;
-        let addedBy: {createdBy:"admin" | "instructor";Id:string};
+        let assignedInstructorId: string;
+        let addedBy: { createdBy: "admin" | "instructor"; Id: string };
 
-        if(userRole==="admin"){
-            if(!instructorId){
-                res.status(400).json({message:"Instrcutor id is Required When an admin creates course"})
+        if (userRole === "admin") {
+            if (!instructorId) {
+                res.status(400).json({ message: "Instrcutor id is Required When an admin creates course" })
                 return;
             }
-            const instructorExist=await User.findById(instructorId)
-            if(!instructorExist){
-                res.status(400).json({message:"Invalid Instructor Id"})
+            const instructorExist = await User.findById(instructorId)
+            if (!instructorExist) {
+                res.status(400).json({ message: "Invalid Instructor Id" })
                 return;
             }
-            assignedInstructorId=instructorId;
-            addedBy = { createdBy: "admin", Id: userId};
+            assignedInstructorId = instructorId;
+            addedBy = { createdBy: "admin", Id: userId };
 
-        }else if(userRole==="instructor"){
-            assignedInstructorId=userId;
-            addedBy = { createdBy: "instructor", Id:userId};
-        }else{
-            res.status(400).json({message:"You are not authorized to create course"})
+        } else if (userRole === "instructor") {
+            assignedInstructorId = userId;
+            addedBy = { createdBy: "instructor", Id: userId };
+        } else {
+            res.status(400).json({ message: "You are not authorized to create course" })
             return;
         }
-         
+        const timestamp = Date.now();
+        const uniqueCourseId = `${title.replace(/\s+/g, "-").toLowerCase()}-${timestamp}`;
 
         const instructorProfile = await Profile.findOne({ user: assignedInstructorId });
         if (!instructorProfile) {
@@ -45,7 +49,7 @@ export const createCourse = async (req: Request, res: Response) => {
             res.status(404).json({ message: "Instructor not found" });
             return
         }
-    
+
         if (instructor.isVerified === 0) {
             res.status(403).json({ message: "You must complete your profile before creating a course" });
             return
@@ -59,7 +63,8 @@ export const createCourse = async (req: Request, res: Response) => {
             syllabus,
             semester,
             status: "active",
-            added_by:addedBy
+            added_by: addedBy,
+            courseId: uniqueCourseId
         });
         await newCourse.save();
         res.status(201).json({ message: 'Course created successfully', course: newCourse });
@@ -69,10 +74,10 @@ export const createCourse = async (req: Request, res: Response) => {
 };
 //enrolling in course(many to many)
 export const enrollCourse = async (req: Request, res: Response) => {
-    const { id } = req.body;
+    const { courseId } = req.body;
     const studentId = (req as any).user.userId;
     try {
-        const course = await Course.findById(id);
+        const course = await Course.findById(courseId);
         if (!course) {
             res.status(404).json({ message: "Course not found" });
             return;
@@ -142,16 +147,16 @@ export const getCourses = async (req: Request, res: Response) => {
         if (userRole === "admin") {
 
 
-            courses = await Course.find(filter).populate("instructor", "username email").select("title semester status createdAt");
+            courses = await Course.find(filter).populate("instructor", "username email").select(" courseId title semester status createdAt");
         } else if (userRole === "instructor") {
-            courses = await Course.find({ instructor: userId, ...filter }).select("title semester status createdAt")
+            courses = await Course.find({ instructor: userId, ...filter }).select(" courseId title semester status createdAt")
         } else if (userRole === "student") {
             const studentProfile = await Profile.findOne({ user: userId })
             if (!studentProfile) {
                 res.status(400).json({ message: "student profile not found" })
                 return;
             }
-            courses = await Course.find({ semester: studentProfile.semester, status: "active", ...filter }).select("title semester status createdAt")
+            courses = await Course.find({ semester: studentProfile.semester, status: "active", ...filter }).select(" courseIdtitle semester status createdAt")
         }
         if (!courses || courses.length === 0) {
             res.status(400).json({ message: "No courses found" })
@@ -176,7 +181,7 @@ export const updateCourseStatus = async (req: Request, res: Response) => {
         if (userRole === "admin") {
             course = await Course.findById(courseId)
         } else if (userRole == "instructor") {
-            course = await Course.findOne({ _id: courseId, instructor: userId })
+            course = await Course.findOne({ courseId, instructor: userId })
         } else {
             res.status(400).json({ message: "You are not authorized to update course status" })
             return;
@@ -231,7 +236,7 @@ export const removeOrTransferCourses = async (req: Request, res: Response) => {
             res.status(400).json({ message: "Course IDs must be an array with at least one course" });
             return;
         }
-        const courses = await Course.find({ _id: { $in: courseIds }, instructor: userId });
+        const courses = await Course.find({ courseId: { $in: courseIds }, instructor: userId });
         if (courses.length === 0) {
             res.status(400).json({ message: "No courses found or you are not authorized" });
             return;
@@ -239,10 +244,10 @@ export const removeOrTransferCourses = async (req: Request, res: Response) => {
         if (action === "delete") {
             const coursesWithStudents = courses.filter(course => course.students.length > 0);
             if (coursesWithStudents.length > 0) {
-                res.status(400).json({ message: "cannot delete courses with students enrolled in it", coursesWithStudents: coursesWithStudents.map(course => course._id) });
+                res.status(400).json({ message: "cannot delete courses with students enrolled in it", coursesWithStudents: coursesWithStudents.map(course => course.courseId) });
                 return;
             }
-            await Course.deleteMany({ _id: { $in: courseIds } })
+            await Course.deleteMany({ courseId: { $in: courseIds } })
             res.status(200).json({ message: "Courses deleted Suceesfully" });
             return;
         } else if (action === "transfer") {
@@ -255,7 +260,7 @@ export const removeOrTransferCourses = async (req: Request, res: Response) => {
                 res.status(400).json({ message: "Invalid instrcutor ID" });
                 return;
             }
-            await Course.updateMany({ _id: { $in: courseIds } }, { instructor: newInstructorId })
+            await Course.updateMany({ courseId: { $in: courseIds } }, { instructor: newInstructorId })
             res.status(200).json({ message: "Course transffered suceesfully" })
             return;
         } else {
@@ -313,7 +318,7 @@ export const removeStudentsFromCourse = async (req: Request, res: Response) => {
             res.status(400).json({ message: "Course Ids and array of students ids is required" })
             return;
         }
-        const course = await Course.findOne({ _id: courseId, instructor: instructorId });
+        const course = await Course.findOne({ courseId, instructor: instructorId });
         if (!course) {
             res.status(400).json({ message: "Course not found you are not instrcutor" })
             return;
@@ -327,38 +332,93 @@ export const removeStudentsFromCourse = async (req: Request, res: Response) => {
 
 }
 //admin can delete instrcutor Courses
-export const deleteInstructorCourses=async (req:Request,res:Response)=>{
+export const deleteInstructorCourses = async (req: Request, res: Response) => {
     try {
-        const {courseIds,instructorId}=req.body;
-        const instructor=await User.findById(instructorId);
-        if(!instructor){
-            res.status(400).json({message:"instrcutor not found "})
+        const { courseIds, instructorId } = req.body;
+        const instructor = await User.findById(instructorId);
+        if (!instructor) {
+            res.status(400).json({ message: "instrcutor not found " })
             return;
         }
-        const courses=await Course.find({_id:{$in:courseIds}, instructor:instructorId}).select("title students")
-        if(courses.length===0){
-            res.status(400).json({message:"No courses found for this instrcutor"})
+        const courses = await Course.find({ courseId: { $in: courseIds }, instructor: instructorId }).select("title students")
+        if (courses.length === 0) {
+            res.status(400).json({ message: "No courses found for this instrcutor" })
             return;
         }
-        const coursesWithStudents=courses.filter(course=>course.students.length>0)
-        if(coursesWithStudents.length>0)
-        {
-            res.status(400).json({message:"Cannot delete Courses beCause students are enroleed in it",
+        const coursesWithStudents = courses.filter(course => course.students.length > 0)
+        if (coursesWithStudents.length > 0) {
+            res.status(400).json({
+                message: "Cannot delete Courses beCause students are enroleed in it",
                 coursesWithStudents: coursesWithStudents.map(course => ({
-                    courseId: course._id,
-                    courseTitle: course.title,  
+                    courseId: course.courseId,
+                    courseTitle: course.title,
                     enrolledStudents: course.students.length
-                
+
                 }))
             });
             return;
         }
-        await Course.deleteMany({_id:{$in:courseIds},students:{$size:0}});
-        res.status(200).json({message:"Courses deleted successfully"});
+        await Course.deleteMany({ courseId: { $in: courseIds }, students: { $size: 0 } });
+        res.status(200).json({ message: "Courses deleted successfully" });
         return;
-        } catch (error: any) {
-            res.status(500).json({ message: "Error deleting instructor courses", error: error.message});
-            
+    } catch (error: any) {
+        res.status(500).json({ message: "Error deleting instructor courses", error: error.message });
+
     }
 };
+// /upload course materials (instrcutor  only)
+// export const uploadCourseMaterials=async (req:Request,res:Response)=>{
+//     try{
+//         const {courseId}=req.params;
+//         const course=await Course.findById(courseId);
+//         if(!course){
+//             res.status(400).json({message:"Course not found"});
+//             return;
+//             }
+//             const {file:any }=req;
+//             const courseMaterials=await Course.findByIdAndUpdate(courseId,{ $push: { materials: any }
+//                 });
+//             res.status(200).json({message:"Course materials uploaded successfully"});
+//             return;
+//         } catch (error: any) {
+//             res.status(500).json({ message: "Error uploading course materials", error:error.message});
+//             return;
+//         }
 
+//     }
+//upload course materails (instrcutor only)
+export const uploadCourseMaterials = async (req: Request, res: Response) => {
+    try {
+        console.log("recived Files", req.files)
+        if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+            res.status(400).json({ message: "No files uploaded" });
+            return;
+        }
+        const instructorUsername = (req as any).user.username;
+        const { courseId } = req.body;
+        const course = await Course.findOne({ courseId,instructorUsername});
+        if (!course) {
+            res.status(400).json({ message: "Course not found or Unauthorized" })
+            return;
+        }
+        const uploadedFiles = (req.files as Express.Multer.File[]).map(file => ({
+            filename: file.filename,
+            path: `/uploads/${instructorUsername}/courses/${courseId}/${file.filename}`,
+          }));
+        if(uploadedFiles.length===0){
+            res.status(400).json({message:"No files Uploadedd"})
+        }
+        await Course.findOneAndUpdate(
+            { courseId: courseId },
+            { $push: { materials: { $each: uploadedFiles } } },
+            { new: true, runValidators: true }
+          );
+          
+        res.status(200).json({message:"File Sucessfully uploaded",files:uploadedFiles})
+
+
+    } catch (error: any) {
+        res.status(500).json({ message: "Error uploading course materials", error: error.message });
+        return;
+    }
+}

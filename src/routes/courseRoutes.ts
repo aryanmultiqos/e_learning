@@ -1,7 +1,8 @@
 import express from 'express'
 import { protect } from '../middleware/authMiddleware'
 import { roleProtect } from '../middleware/authMiddleware'
-import { createCourse , enrollCourse, deEnrollCourse, getCourseByIns,getCourses,updateCourseStatus, removeOrTransferCourses, endorResumeCourses, removeStudentsFromCourse, deleteInstructorCourses} from '../controller/courseController'
+import upload from '../middleware/multerconfig'
+import { createCourse, enrollCourse, deEnrollCourse, getCourseByIns,getCourses,updateCourseStatus, removeOrTransferCourses, endorResumeCourses, removeStudentsFromCourse, deleteInstructorCourses, uploadCourseMaterials} from '../controller/courseController'
 
 
 const router = express.Router()
@@ -28,7 +29,8 @@ router.patch('/end-resume',protect,roleProtect(['instructor']), endorResumeCours
 router.post('/remove-students',protect,roleProtect(["instructor"]),removeStudentsFromCourse)
 //admin can delete  instrcutor courses 
 router.post('/delete-courses',protect,roleProtect(['admin']),deleteInstructorCourses)
-
+//uploading cours materilas(instrcutor only)
+router.post('/upload-materials',protect,roleProtect(['instructor']),upload.array("files"),uploadCourseMaterials)
 
 export default router;      
 

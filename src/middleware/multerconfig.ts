@@ -1,19 +1,25 @@
 import multer, { StorageEngine } from 'multer';
 import { Request, Response } from 'express';
 import fs from "fs"
+import path from 'path';
 
 const storage= multer.diskStorage({
   destination: function(req: Request, file: Express.Multer.File, cb){
     const instructorUsername=(req as any).user.username;
     const {courseId}=req.body;
-    const uploadPath=`uploads/${instructorUsername}/courses/${courseId}`;
+    const uploadPath = path.join(__dirname, `../../uploads/${instructorUsername}/courses/${courseId}`);
+
+    console.log("Upload Path:", uploadPath); 
     if(!fs.existsSync(uploadPath)){
       fs.mkdirSync(uploadPath,{recursive:true});
+      console.log("Creating directory:", uploadPath); // Debug log
+
     }
 
     cb(null, uploadPath);
   },  
   filename: function (req: Request, file: Express.Multer.File, cb) {
+    console.log("📄 Saving File:", file.originalname);
     cb(null,file.originalname)
   },
 });

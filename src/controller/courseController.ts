@@ -1,8 +1,10 @@
-import { Request, Response } from 'express';
+import { Request, response, Response } from 'express';
 import User from '../models/user';
 import Course from '../models/course';
 import Profile from '../models/profile';
-
+import mongoose from 'mongoose';
+import path from 'path';
+import fs from 'fs'
 
 
 //create new cousre(admin or ins only)
@@ -394,9 +396,17 @@ export const uploadCourseMaterials = async (req: Request, res: Response) => {
             res.status(400).json({ message: "No files uploaded" });
             return;
         }
+
         const instructorUsername = (req as any).user.username;
+        const instructorId = new mongoose.Types.ObjectId((req as any).user.userId);
         const { courseId } = req.body;
-        const course = await Course.findOne({ courseId,instructorUsername});
+
+        // console.log("Extracted courseId:", courseId);
+        //     console.log("Extracted instructorUsername:", instructorUsername);
+        //     console.log("User data in request:", (req as any).user);    
+        const course = await Course.findOne({ courseId, instructor: instructorId });
+        //  console.log("Course found:", course);
+
         if (!course) {
             res.status(400).json({ message: "Course not found or Unauthorized" })
             return;
@@ -404,17 +414,18 @@ export const uploadCourseMaterials = async (req: Request, res: Response) => {
         const uploadedFiles = (req.files as Express.Multer.File[]).map(file => ({
             filename: file.filename,
             path: `/uploads/${instructorUsername}/courses/${courseId}/${file.filename}`,
-          }));
-        if(uploadedFiles.length===0){
-            res.status(400).json({message:"No files Uploadedd"})
+            url: `${req.protocol}://${req.get('host')}/uploads/${instructorUsername}/courses/${courseId}/${file.filename}`
+        }));
+        if (uploadedFiles.length === 0) {
+            res.status(400).json({ message: "No files Uploadedd" })
         }
         await Course.findOneAndUpdate(
             { courseId: courseId },
             { $push: { materials: { $each: uploadedFiles } } },
             { new: true, runValidators: true }
-          );
-          
-        res.status(200).json({message:"File Sucessfully uploaded",files:uploadedFiles})
+        );
+        const responseFiles = uploadedFiles.map(({ url, filename }) => ({ filename, url }));
+        res.status(200).json({ message: "File Sucessfully uploaded", files: responseFiles })
 
 
     } catch (error: any) {
@@ -422,3 +433,60 @@ export const uploadCourseMaterials = async (req: Request, res: Response) => {
         return;
     }
 }
+//delete course materails (videos )
+export const deleteCourseMaterials = async (req: Request, res: Response) => {
+    try {
+        console.log(" deleteCourseMaterials function triggered");
+
+        const { courseId, files } = req.body;
+        const instructorUsername = (req as any).user.username;
+
+        if (!files || !Array.isArray(files) || files.length === 0) {
+            res.status(400).json({ message: "file list is empty" })
+            return;
+        }
+        // console.log("🔹 Searching for course with:", { courseId, instructorUsername });
+        const instructorId = new mongoose.Types.ObjectId((req as any).user.userId);
+      //  console.log("🔹 Received Course ID:", courseId);
+        //console.log("🔹 Instructor ID from request:", instructorId);
+
+        const course = await Course.findOne({ courseId, "added_by.Id": instructorId })
+       // console.log("📌 Found Course:", course);
+
+
+        if (!course) {
+            res.status(400).json({ message: "Course not found " })
+            return;
+        }
+        console.log(" Course Materials:", course.materials);
+    console.log("Requested Files to Delete:", files);
+        const materialsToDelete = course.materials.filter((material) => files.includes(material.filename));
+        if (materialsToDelete.length === 0) {
+            res.status(400).json({ message: "No files to delete" });
+            return;
+        }
+        const courseMaterialsPath = path.join(__dirname, `../../uploads/${instructorUsername}/courses/${courseId}`)
+        materialsToDelete.forEach((material) => {
+            const filePath = path.join(courseMaterialsPath, material.filename)
+           if(fs.existsSync(filePath)){
+            try{
+                fs.unlinkSync(filePath);
+                console.log("file deleted Suceesfully",filePath)
+            }catch(err:any){
+                console.error("Error deleting file",filePath,err.message )
+            }
+           }else{
+            console.log("file not found",filePath)
+            
+           }
+        })
+        await Course.findOneAndUpdate(
+            { courseId },
+            { $pull: { materials: { filename: { $in: files } } } }
+        );
+        res.status(200).json({ message: "Deleted Suceesfully" })
+    } catch (error: any) {
+        res.status(500).json({ message: "Error deleting Corse materilas", error: error.message })
+        return;
+    }
+};

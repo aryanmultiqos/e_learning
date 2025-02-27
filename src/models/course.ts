@@ -8,7 +8,11 @@ interface ICourse extends Document {
     syllabus: string[];
     rating: number;
     semester:number;
-    materials:String;
+    materials: {
+        filename: string;
+        path: string;
+        uploadedAt: Date;
+    }[];
     status:'active' | 'inactive';
     courseId:String
     added_by:{

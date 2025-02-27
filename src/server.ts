@@ -13,6 +13,8 @@ connectDB();
 app.use('/api/users',userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/profile',profileRoutes)
+app.use('/uploads', express.static('uploads'));
+
   //server startying
   const PORT = process.env.port || 5000;
   app.listen(PORT,()=>{

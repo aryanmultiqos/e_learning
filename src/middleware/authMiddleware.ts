@@ -21,6 +21,8 @@ export const protect=(req:Request,res:Response,next:NextFunction):void=>{
 };
 export const roleProtect=(roles:string[])=>{
     return(req:any, res:Response, next:NextFunction):void=>{
+        console.log("User in roleProtect:", req.user); // Debugging
+
         const user   = req.user;
         if( !user || !roles.includes(user.role)){
              res.status(403).json({message:'You do not have permission to access this resource'})

@@ -4,6 +4,7 @@ interface ICourse extends Document {
     description: string;
     instructor: mongoose.Schema.Types.ObjectId;
     students: mongoose.Schema.Types.ObjectId[];
+    lessons: mongoose.Schema.Types.ObjectId[];
     category: string;
     syllabus: string[];
     rating: number;
@@ -13,6 +14,8 @@ interface ICourse extends Document {
         path: string;
         uploadedAt: Date;
     }[];
+    createdAt?: Date;  
+    updatedAt?: Date;
     status:'active' | 'inactive';
     courseId:String
     added_by:{
@@ -32,6 +35,7 @@ const courseSchema = new mongoose.Schema<ICourse>({
     rating: { type: Number, default: 0 },
     semester:{type:Number,required:true,min:1,max:6},
     status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+    lessons: [{ type: mongoose.Schema.Types.ObjectId, ref: "Lesson" }],
     added_by:{
         createdBy:{type:String,enum:["admin","instructor"],required:true},
         Id:{type:mongoose.Schema.Types.ObjectId,ref:"User",required:true}

@@ -5,14 +5,22 @@ import path from 'path';
 
 const storage= multer.diskStorage({
   destination: function(req: Request, file: Express.Multer.File, cb){
-    const instructorUsername=(req as any).user.username;
-    const {courseId}=req.body;
+    const instructorUsername=(req as any).user?.username;
+    const courseId = req.body.courseId || req.params.courseId; 
+
+    console.log("Instructor:", instructorUsername);
+    console.log("Course ID:", courseId);
+    if (!instructorUsername || !courseId) {
+      console.error(" Missing instructorUsername or courseId");
+      return cb(new Error("Instructor or Course ID missing"), "");
+  }
+
     const uploadPath = path.join(__dirname, `../../uploads/${instructorUsername}/courses/${courseId}`);
 
     console.log("Upload Path:", uploadPath); 
     if(!fs.existsSync(uploadPath)){
       fs.mkdirSync(uploadPath,{recursive:true});
-      console.log("Creating directory:", uploadPath); // Debug log
+      console.log("Creating directory:", uploadPath); 
 
     }
 
@@ -25,7 +33,7 @@ const storage= multer.diskStorage({
 });
 
 const fileFilter=function (req:Request, File:Express.Multer.File,cb:any){
-  const allowedFileTypes=["application/pdf","video/mp4"];
+  const allowedFileTypes = ["application/pdf", "video/mp4", "image/png", "image/jpeg", "image/jpg"];
   if(allowedFileTypes.includes(File.mimetype)){
     cb(null,true);
   }else{

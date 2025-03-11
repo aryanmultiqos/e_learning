@@ -2,6 +2,7 @@ import mongoose, { Document , Types} from "mongoose";
 import bcrypt from 'bcryptjs';
 
 interface IUser extends Document {
+  _id: mongoose.Types.ObjectId;
     username: string;
     email: String
     password: string

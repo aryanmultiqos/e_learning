@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import userRoutes from './routes/userRoutes'
 import profileRoutes from './routes/profileRoutes'
 import courseRoutes from './routes/courseRoutes';
+import path = require("path");
 dotenv.config();
 
 const app=express();
@@ -14,6 +15,8 @@ app.use('/api/users',userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/profile',profileRoutes)
 app.use('/uploads', express.static('uploads'));
+// app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 
   //server startying
   const PORT = process.env.port || 5000;
